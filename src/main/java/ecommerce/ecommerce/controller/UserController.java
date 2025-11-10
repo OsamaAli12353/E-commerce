@@ -2,12 +2,17 @@ package ecommerce.ecommerce.controller;
 
 import ecommerce.ecommerce.DTO.RoleDTO;
 import ecommerce.ecommerce.DTO.TransactionDTO;
+import ecommerce.ecommerce.DTO.UserDTO;
 import ecommerce.ecommerce.DTO.UserWithDetailsDTO;
 import ecommerce.ecommerce.entity.Users;
 import ecommerce.ecommerce.service.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -22,7 +27,7 @@ public class UserController {
     // GET all users with details
     @GetMapping
     public List<UserWithDetailsDTO> getAllUsers() {
-        List<Users> usersList = userService.findAllUsers();
+        List<Users> usersList =new ArrayList<>();
 
         return usersList.stream().map(user -> {
             // تحويل Role
@@ -110,5 +115,48 @@ public class UserController {
         return "User deleted successfully";
     }
 
-    //buy
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String password = request.get("password");
+
+        Users user = userService.login(email, password);
+        if (user != null) {
+            return ResponseEntity.ok("Login successful for user: " + user.getName());
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        }
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@RequestBody UserDTO request) {
+        try {
+            Users user = userService.register(
+                    request.getName(),
+                    request.getEmail(),
+                    request.getPassword()
+            );
+            //register success
+            return ResponseEntity.ok("Register successful for user: " + user.getName());
+
+        } catch (RuntimeException e) {
+            // to get more info about the problem
+            String msg = e.getMessage();
+            //if the email exist
+            if (msg.contains("Email is already registered")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("This email is already registered. Please use another email.");
+            }
+            //if the password doesn't meet requirment
+            else if (msg.contains("Password must")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(msg);
+            }
+            //if there is server problem
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred: " + msg);
+        }
+    }
 }
+
+
