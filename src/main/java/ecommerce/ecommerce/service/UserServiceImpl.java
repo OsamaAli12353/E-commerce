@@ -11,7 +11,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import ecommerce.ecommerce.security.SecurityConfig;
 import java.util.List;
 
 @Service
@@ -22,7 +21,9 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserServiceImpl(UsersRepository usersRepository,RolesRepository rolesRepository,PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UsersRepository usersRepository,
+                           RolesRepository rolesRepository,
+                           PasswordEncoder passwordEncoder) {
         this.usersRepository = usersRepository;
         this.rolesRepository = rolesRepository;
         this.passwordEncoder = passwordEncoder;
@@ -35,87 +36,120 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserWithDetailsDTO getUserWithDetailsById(int id) {
+        Users user = findUserById(id);
+
+        RoleDTO roleDTO = user.getRole() != null
+                ? new RoleDTO(user.getRole().getRoleId(), user.getRole().getRoleName())
+                : null;
+
+        List<TransactionDTO> transactionsDTO = user.getTransactions().stream()
+                .map(tx -> new TransactionDTO(
+                        tx.getTransactionId(),
+                        tx.getTransactionDate(),
+                        tx.getTransactionInfo(),
+                        tx.getUser() != null ? tx.getUser().getName() : null,
+                        tx.getUser() != null ? tx.getUser().getEmail() : null
+                ))
+                .toList();
+
+        return new UserWithDetailsDTO(
+                user.getUserId(),
+                user.getName(),
+                user.getEmail(),
+                roleDTO,
+                transactionsDTO
+        );
+    }
+
+    @Override
     public List<UserWithDetailsDTO> getAllUsersWithDetails() {
-        List<Users> usersList = usersRepository.findAll();
+        return usersRepository.findAll().stream()
+                .map(this::mapToUserWithDetailsDTO)
+                .toList();
+    }
 
-        return usersList.stream().map(user -> {
-            RoleDTO roleDTO = user.getRole() != null
-                    ? new RoleDTO(user.getRole().getRoleId(), user.getRole().getRoleName())
-                    : null;
+    private UserWithDetailsDTO mapToUserWithDetailsDTO(Users user) {
+        RoleDTO roleDTO = user.getRole() != null
+                ? new RoleDTO(user.getRole().getRoleId(), user.getRole().getRoleName())
+                : null;
 
-            List<TransactionDTO> transactionsDTO = user.getTransactions().stream()
-                    .map(tx -> new TransactionDTO(
-                            tx.getTransactionId(),
-                            tx.getTransactionDate(),
-                            tx.getTransactionInfo(),
-                            tx.getUser() != null ? tx.getUser().getName() : null,
-                            tx.getUser() != null ? tx.getUser().getEmail() : null
-                    ))
-                    .toList();
+        List<TransactionDTO> transactionsDTO = user.getTransactions().stream()
+                .map(tx -> new TransactionDTO(
+                        tx.getTransactionId(),
+                        tx.getTransactionDate(),
+                        tx.getTransactionInfo(),
+                        tx.getUser() != null ? tx.getUser().getName() : null,
+                        tx.getUser() != null ? tx.getUser().getEmail() : null
+                ))
+                .toList();
 
-            return new UserWithDetailsDTO(
-                    user.getUserId(),
-                    user.getName(),
-                    user.getEmail(),
-                    roleDTO,
-                    transactionsDTO
-            );
-        }).toList();
+        return new UserWithDetailsDTO(
+                user.getUserId(),
+                user.getName(),
+                user.getEmail(),
+                roleDTO,
+                transactionsDTO
+        );
     }
 
     @Transactional
     @Override
-    public void addOrUpdateUser(Users user) {
-        usersRepository.save(user);
-        System.out.println("User saved successfully");
+    public Users addOrUpdateUser(Users user) {
+       return usersRepository.save(user);
+    }
+
+    @Transactional
+    @Override
+    public void updateUser(int id, Users updatedUser) {
+        Users existingUser = findUserById(id);
+        existingUser.setName(updatedUser.getName());
+        existingUser.setEmail(updatedUser.getEmail());
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
+            existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+        }
+        usersRepository.save(existingUser);
     }
 
     @Transactional
     @Override
     public void deleteUserById(int id) {
-        Users user = usersRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+        Users user = findUserById(id);
         usersRepository.delete(user);
-        System.out.println("User deleted successfully");
     }
 
     @Override
     public Users login(String email, String password) {
-
         Users user = usersRepository.findUsersByEmail(email);
-
-        if (passwordEncoder.matches(password, user.getPassword())) {
-            return user;
-        }
-        throw new RuntimeException("Invalid email or password");
+        if (user == null) throw new RuntimeException("Invalid email or password");
+        if (!passwordEncoder.matches(password, user.getPassword()))
+            throw new RuntimeException("Invalid email or password");
+        return user;
     }
 
     @Transactional
     @Override
     public Users register(String name, String email, String password) {
-        //check if email is exist
-        Users existingUser = usersRepository.findUsersByEmail(email);
-        if (existingUser != null)
+        if (usersRepository.findUsersByEmail(email) != null)
             throw new RuntimeException("Email is already registered");
 
-        // check password is secure
-        if (!PasswordValidator.isValid(password)) {
+        if (!PasswordValidator.isValid(password))
             throw new RuntimeException(
                     "Password must be at least 8 characters long, contain a capital letter, a number, and a special character."
             );
-        }
+
         String hashedPassword = passwordEncoder.encode(password);
-
         Users newUser = new Users(name, email, hashedPassword);
-        //give it default role as costumer
+
         Roles customerRole = rolesRepository.findByRoleName("CUSTOMER");
-
-        if (customerRole == null) {
+        if (customerRole == null)
             throw new RuntimeException("Customer role not found in database");
-        }
-        newUser.setRole(customerRole);
 
+        newUser.setRole(customerRole);
         return usersRepository.save(newUser);
+    }
+    public boolean isAdmin(Users user) {
+        return user.getRole() != null && "ADMIN".equals(user.getRole().getRoleName());
     }
 
 }

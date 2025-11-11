@@ -12,32 +12,35 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 public class ProductsController {
-
     private final ProductService productService;
     private final UserService userService;
 
-    public ProductsController(ProductService productService,UserService userService) {
+    public ProductsController(ProductService productService, UserService userService) {
         this.productService = productService;
-        this. userService=userService;
+        this.userService = userService;
     }
 
-    @GetMapping
+    // Accessible by anyone (permitAll)
+    @GetMapping("/all")
     public List<Products> getAllProducts() {
         return productService.findAllProducts();
     }
 
+    // Accessible by anyone
     @GetMapping("/{id}")
     public Products getProductById(@PathVariable int id) {
         return productService.findProductById(id);
     }
 
-    @PostMapping
+    // Only ADMIN
+    @PostMapping("/add")
     public String addProduct(@RequestBody Products product) {
         productService.addOrUpdateProduct(product);
         return "Product added successfully";
     }
 
-    @PutMapping("/{id}")
+    // Only ADMIN
+    @PutMapping("/update/{id}")
     public String updateProduct(@PathVariable int id, @RequestBody Products updatedProduct) {
         Products existingProduct = productService.findProductById(id);
         existingProduct.setName(updatedProduct.getName());
@@ -47,11 +50,14 @@ public class ProductsController {
         return "Product updated successfully";
     }
 
-    @DeleteMapping("/{id}")
+    // Only ADMIN
+    @DeleteMapping("/delete/{id}")
     public String deleteProduct(@PathVariable int id) {
         productService.deleteProductById(id);
         return "Product deleted successfully";
     }
+
+    // CUSTOMER or ADMIN
     @PostMapping("/buy")
     public String buyProduct(@RequestBody BuyRequestDTO request) {
         Users user = userService.findUserById(request.getUserId());
@@ -63,5 +69,5 @@ public class ProductsController {
 
         return productService.buyProducts(user, product, request.getQuantity());
     }
-
 }
+
