@@ -9,8 +9,9 @@ import ecommerce.ecommerce.repository.RolesRepository;
 import ecommerce.ecommerce.repository.UsersRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import ecommerce.ecommerce.security.SecurityConfig;
 import java.util.List;
 
 @Service
@@ -18,11 +19,13 @@ public class UserServiceImpl implements UserService {
 
     private final UsersRepository usersRepository;
     private final RolesRepository rolesRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserServiceImpl(UsersRepository usersRepository,RolesRepository rolesRepository) {
+    public UserServiceImpl(UsersRepository usersRepository,RolesRepository rolesRepository,PasswordEncoder passwordEncoder) {
         this.usersRepository = usersRepository;
         this.rolesRepository = rolesRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -78,7 +81,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Users login(String email, String password) {
-        return usersRepository.findUsersByEmailAndPassword(email, password);
+
+        Users user = usersRepository.findUsersByEmail(email);
+
+        if (passwordEncoder.matches(password, user.getPassword())) {
+            return user;
+        }
+        throw new RuntimeException("Invalid email or password");
     }
 
     @Transactional
@@ -95,8 +104,9 @@ public class UserServiceImpl implements UserService {
                     "Password must be at least 8 characters long, contain a capital letter, a number, and a special character."
             );
         }
+        String hashedPassword = passwordEncoder.encode(password);
 
-        Users newUser = new Users(name, email, password);
+        Users newUser = new Users(name, email, hashedPassword);
         //give it default role as costumer
         Roles customerRole = rolesRepository.findByRoleName("CUSTOMER");
 
@@ -107,4 +117,5 @@ public class UserServiceImpl implements UserService {
 
         return usersRepository.save(newUser);
     }
+
 }
