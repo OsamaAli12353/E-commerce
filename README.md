@@ -391,7 +391,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you encounter any issues or have questions:
 - 🐛 [Report a bug](https://github.com/OsamaAli12353/E-commerce/issues)
 - 💡 [Request a feature](https://github.com/OsamaAli12353/E-commerce/issues)
-- 📧 Contact: your.email@example.com
+- 📧 Contact: osamaalsharqawy92@gmail.com
 
 ---
 
