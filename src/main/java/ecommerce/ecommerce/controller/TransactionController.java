@@ -2,10 +2,12 @@ package ecommerce.ecommerce.controller;
 
 import ecommerce.ecommerce.DTO.TransactionDTO;
 import ecommerce.ecommerce.entity.Transaction;
+import ecommerce.ecommerce.security.CustomUserDetails;
 import ecommerce.ecommerce.service.TransactionService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -18,28 +20,33 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
+    // ADMIN only
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<TransactionDTO> getAllTransactions() {
-        List<Transaction> transactions = transactionService.findAllTransactions();
 
-        return transactions.stream()
-                .map(tx -> new TransactionDTO(
-                        tx.getTransactionId(),
-                        tx.getTransactionDate(),
-                        tx.getTransactionInfo(),
-                        tx.getUser() != null ? tx.getUser().getName() : null,
-                        tx.getUser() != null ? tx.getUser().getEmail() : null
-                ))
+        return transactionService.findAllTransactions()
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
-    @GetMapping("/{id}")
-    public TransactionDTO getTransactionById(@PathVariable int id) {
-        Transaction tx = transactionService.findTransactionById(id);
-        if (tx == null) {
-            throw new RuntimeException("Transaction with ID " + id + " not found");
-        }
+    // CUSTOMER or ADMIN
+    @PreAuthorize("hasAnyRole('ADMIN','CUSTOMER')")
+    @GetMapping("/my")
+    public List<TransactionDTO> getMyTransactions(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
+        return transactionService
+                .findTransactionsByUser(userDetails.getUser())
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+
+    // Mapper (private – clean)
+    private TransactionDTO toDTO(Transaction tx) {
         return new TransactionDTO(
                 tx.getTransactionId(),
                 tx.getTransactionDate(),
@@ -47,31 +54,5 @@ public class TransactionController {
                 tx.getUser() != null ? tx.getUser().getName() : null,
                 tx.getUser() != null ? tx.getUser().getEmail() : null
         );
-    }
-
-    @GetMapping("/by-date")
-    public List<TransactionDTO> getTransactionsByDate(@RequestParam Date date) {
-        List<Transaction> transactions = transactionService.findTransactionsByDate(date);
-        return transactions.stream()
-                .map(tx -> new TransactionDTO(
-                        tx.getTransactionId(),
-                        tx.getTransactionDate(),
-                        tx.getTransactionInfo(),
-                        tx.getUser() != null ? tx.getUser().getName() : null,
-                        tx.getUser() != null ? tx.getUser().getEmail() : null
-                ))
-                .toList();
-    }
-
-    @PostMapping
-    public String addTransaction(@RequestBody Transaction transaction) {
-        transactionService.addOrUpdateTransaction(transaction);
-        return "Transaction added successfully";
-    }
-
-    @DeleteMapping("/{id}")
-    public String deleteTransaction(@PathVariable int id) {
-        transactionService.deleteTransactionById(id);
-        return "Transaction deleted successfully";
     }
 }

@@ -2,9 +2,11 @@ package ecommerce.ecommerce.controller;
 
 import ecommerce.ecommerce.DTO.BuyRequestDTO;
 import ecommerce.ecommerce.entity.Products;
-import ecommerce.ecommerce.entity.Users;
+import ecommerce.ecommerce.entity.User;
+import ecommerce.ecommerce.security.CustomUserDetails;
 import ecommerce.ecommerce.service.ProductService;
-import ecommerce.ecommerce.service.UserService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,45 +14,50 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 public class ProductsController {
-    private final ProductService productService;
-    private final UserService userService;
 
-    public ProductsController(ProductService productService, UserService userService) {
+    private final ProductService productService;
+
+    public ProductsController(ProductService productService) {
         this.productService = productService;
-        this.userService = userService;
     }
 
-    // Accessible by anyone (permitAll)
+    // Public
     @GetMapping("/all")
     public List<Products> getAllProducts() {
         return productService.findAllProducts();
     }
 
-    // Accessible by anyone
+    // Public
     @GetMapping("/{id}")
     public Products getProductById(@PathVariable int id) {
         return productService.findProductById(id);
     }
 
-    // Only ADMIN
+    // ADMIN only
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/add")
     public String addProduct(@RequestBody Products product) {
         productService.addOrUpdateProduct(product);
         return "Product added successfully";
     }
 
-    // Only ADMIN
+    // ADMIN only
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/update/{id}")
-    public String updateProduct(@PathVariable int id, @RequestBody Products updatedProduct) {
-        Products existingProduct = productService.findProductById(id);
-        existingProduct.setName(updatedProduct.getName());
-        existingProduct.setPrice(updatedProduct.getPrice());
-        existingProduct.setQuantity(updatedProduct.getQuantity());
-        productService.addOrUpdateProduct(existingProduct);
+    public String updateProduct(@PathVariable int id,
+                                @RequestBody Products updatedProduct) {
+
+        Products product = productService.findProductById(id);
+        product.setName(updatedProduct.getName());
+        product.setPrice(updatedProduct.getPrice());
+        product.setQuantity(updatedProduct.getQuantity());
+
+        productService.addOrUpdateProduct(product);
         return "Product updated successfully";
     }
 
-    // Only ADMIN
+    // ADMIN only
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete/{id}")
     public String deleteProduct(@PathVariable int id) {
         productService.deleteProductById(id);
@@ -58,16 +65,15 @@ public class ProductsController {
     }
 
     // CUSTOMER or ADMIN
+    @PreAuthorize("hasAnyRole('ADMIN','CUSTOMER')")
     @PostMapping("/buy")
-    public String buyProduct(@RequestBody BuyRequestDTO request) {
-        Users user = userService.findUserById(request.getUserId());
+    public String buyProduct(@RequestBody BuyRequestDTO request,
+                             @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        User user = userDetails.getUser(); // من JWT
         Products product = productService.findProductById(request.getProductId());
 
-        if (user == null || product == null) {
-            return "User or Product not found";
-        }
-
-        return productService.buyProducts(user, product, request.getQuantity());
+        return productService.buyProducts(
+                user, product, request.getQuantity());
     }
 }
-

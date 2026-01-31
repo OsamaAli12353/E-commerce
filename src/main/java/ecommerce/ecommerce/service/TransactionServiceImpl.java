@@ -1,6 +1,7 @@
 package ecommerce.ecommerce.service;
 
 import ecommerce.ecommerce.entity.Transaction;
+import ecommerce.ecommerce.entity.User;
 import ecommerce.ecommerce.repository.TransactionRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,4 +50,8 @@ public class TransactionServiceImpl implements TransactionService {
     public List<Transaction> findTransactionsByDate(Date date) {
         return transactionRepository.findByTransactionDate(date);
     }
+    public List<Transaction> findTransactionsByUser(User user) {
+        return transactionRepository.findByUser(user);
+    }
+
 }

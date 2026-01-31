@@ -4,40 +4,41 @@ import ecommerce.ecommerce.DTO.RoleDTO;
 import ecommerce.ecommerce.DTO.TransactionDTO;
 import ecommerce.ecommerce.DTO.UserWithDetailsDTO;
 import ecommerce.ecommerce.entity.Roles;
-import ecommerce.ecommerce.entity.Users;
+import ecommerce.ecommerce.entity.User;
 import ecommerce.ecommerce.repository.RolesRepository;
-import ecommerce.ecommerce.repository.UsersRepository;
+import ecommerce.ecommerce.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
 
-    private final UsersRepository usersRepository;
+    private final UserRepository userRepository;
     private final RolesRepository rolesRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserServiceImpl(UsersRepository usersRepository,
+    public UserServiceImpl(UserRepository userRepository,
                            RolesRepository rolesRepository,
                            PasswordEncoder passwordEncoder) {
-        this.usersRepository = usersRepository;
+        this.userRepository = userRepository;
         this.rolesRepository = rolesRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    public Users findUserById(int id) {
-        return usersRepository.findById(id)
+    public User findUserById(int id) {
+        return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
     }
 
     @Override
     public UserWithDetailsDTO getUserWithDetailsById(int id) {
-        Users user = findUserById(id);
+        User user = findUserById(id);
 
         RoleDTO roleDTO = user.getRole() != null
                 ? new RoleDTO(user.getRole().getRoleId(), user.getRole().getRoleName())
@@ -64,12 +65,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserWithDetailsDTO> getAllUsersWithDetails() {
-        return usersRepository.findAll().stream()
+        return userRepository.findAll().stream()
                 .map(this::mapToUserWithDetailsDTO)
                 .toList();
     }
 
-    private UserWithDetailsDTO mapToUserWithDetailsDTO(Users user) {
+    private UserWithDetailsDTO mapToUserWithDetailsDTO(User user) {
         RoleDTO roleDTO = user.getRole() != null
                 ? new RoleDTO(user.getRole().getRoleId(), user.getRole().getRoleName())
                 : null;
@@ -95,43 +96,50 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public Users addOrUpdateUser(Users user) {
-       return usersRepository.save(user);
+    public User addOrUpdateUser(User user) {
+       return userRepository.save(user);
     }
 
     @Transactional
     @Override
-    public void updateUser(int id, Users updatedUser) {
-        Users existingUser = findUserById(id);
+    public void updateUser(int id, User updatedUser) {
+        User existingUser = findUserById(id);
         existingUser.setName(updatedUser.getName());
         existingUser.setEmail(updatedUser.getEmail());
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
             existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
         }
-        usersRepository.save(existingUser);
+        userRepository.save(existingUser);
     }
 
     @Transactional
     @Override
     public void deleteUserById(int id) {
-        Users user = findUserById(id);
-        usersRepository.delete(user);
+        User user = findUserById(id);
+        userRepository.delete(user);
     }
 
     @Override
-    public Users login(String email, String password) {
-        Users user = usersRepository.findUsersByEmail(email);
-        if (user == null) throw new RuntimeException("Invalid email or password");
-        if (!passwordEncoder.matches(password, user.getPassword()))
+    public User login(String email, String password) {
+        // جلب المستخدم أو رمي استثناء لو مش موجود
+        User user = userRepository.findUsersByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        // التحقق من الباسورد
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
+        }
+
         return user;
     }
 
     @Transactional
     @Override
-    public Users register(String name, String email, String password) {
-        if (usersRepository.findUsersByEmail(email) != null)
+    public User register(String name, String email, String password) {
+        Optional<User> existingUser = userRepository.findUsersByEmail(email);
+        if (existingUser.isPresent()) {
             throw new RuntimeException("Email is already registered");
+        }
 
         if (!PasswordValidator.isValid(password))
             throw new RuntimeException(
@@ -139,16 +147,17 @@ public class UserServiceImpl implements UserService {
             );
 
         String hashedPassword = passwordEncoder.encode(password);
-        Users newUser = new Users(name, email, hashedPassword);
+        User newUser = new User(name, email, hashedPassword);
 
         Roles customerRole = rolesRepository.findByRoleName("CUSTOMER");
         if (customerRole == null)
             throw new RuntimeException("Customer role not found in database");
 
         newUser.setRole(customerRole);
-        return usersRepository.save(newUser);
+        return userRepository.save(newUser);
     }
-    public boolean isAdmin(Users user) {
+
+    public boolean isAdmin(User user) {
         return user.getRole() != null && "ADMIN".equals(user.getRole().getRoleName());
     }
 

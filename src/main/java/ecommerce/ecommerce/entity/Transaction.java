@@ -14,7 +14,7 @@ public class Transaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private Users user;
+    private User user;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "transaction_date", nullable = false)
@@ -25,7 +25,7 @@ public class Transaction {
 
     public Transaction() {}
 
-    public Transaction(Users user, Date transactionDate, String transactionInfo) {
+    public Transaction(User user, Date transactionDate, String transactionInfo) {
         this.user = user;
         this.transactionDate = transactionDate;
         this.transactionInfo = transactionInfo;
@@ -34,8 +34,8 @@ public class Transaction {
     public int getTransactionId() { return transactionId; }
     public void setTransactionId(int transactionId) { this.transactionId = transactionId; }
 
-    public Users getUser() { return user; }
-    public void setUser(Users user) { this.user = user; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 
     public Date getTransactionDate() { return transactionDate; }
     public void setTransactionDate(Date transactionDate) { this.transactionDate = transactionDate; }

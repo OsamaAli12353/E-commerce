@@ -2,46 +2,46 @@ package ecommerce.ecommerce.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 @Configuration
 public class SecurityConfig {
-    @Bean
-    protected void configure(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        // ----- Public endpoints -----
-                        .requestMatchers("/api/products/all", "/api/products/{id}", "/api/users/register", "/api/users/login").permitAll()
 
-                        // ----- Product management (ADMIN only) -----
-                        .requestMatchers("/api/products/add", "/api/products/update/**", "/api/products/delete/**").hasAuthority("ADMIN")
+    private final JwtAuthFilter jwtFilter;
 
-                        // ----- Buying products (CUSTOMER or ADMIN) -----
-                        .requestMatchers("/api/products/buy").hasAnyAuthority("CUSTOMER","ADMIN")
-
-                        // ----- User endpoints -----
-                        .requestMatchers(HttpMethod.GET, "/api/users").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").hasAnyAuthority("CUSTOMER","ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/users/{id}").hasAnyAuthority("CUSTOMER","ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/users/{id}").hasAnyAuthority("CUSTOMER","ADMIN")
-
-                        // ----- Transaction endpoints -----
-                        .requestMatchers("/api/transactions/**").hasAuthority("ADMIN")
-                        .anyRequest().authenticated()
-                );
+    public SecurityConfig(JwtAuthFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(10);
+        return new BCryptPasswordEncoder(12);
     }
 
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
 
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+        http
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .anyRequest().authenticated() // all others require authentication
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
 }

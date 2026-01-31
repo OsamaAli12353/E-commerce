@@ -1,8 +1,7 @@
 package ecommerce.ecommerce.service;
 
 import ecommerce.ecommerce.entity.Products;
-import ecommerce.ecommerce.entity.Users;
-import org.springframework.boot.autoconfigure.security.SecurityProperties;
+import ecommerce.ecommerce.entity.User;
 
 import java.util.List;
 
@@ -11,5 +10,5 @@ public interface ProductService {
     List<Products> findAllProducts();
     void addOrUpdateProduct(Products product);
     void deleteProductById(int id);
-    public String buyProducts(Users user, Products product, int quantity);
+    public String buyProducts(User user, Products product, int quantity);
 }

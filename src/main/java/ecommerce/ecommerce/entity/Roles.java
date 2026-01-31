@@ -17,7 +17,7 @@ public class Roles {
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
-    private List<Users> users;
+    private List<User> users;
 
     public Roles() {}
 
@@ -31,6 +31,6 @@ public class Roles {
     public String getRoleName() { return roleName; }
     public void setRoleName(String roleName) { this.roleName = roleName; }
 
-    public List<Users> getUsers() { return users; }
-    public void setUsers(List<Users> users) { this.users = users; }
+    public List<User> getUsers() { return users; }
+    public void setUsers(List<User> users) { this.users = users; }
 }

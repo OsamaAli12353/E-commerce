@@ -2,13 +2,12 @@ package ecommerce.ecommerce.service;
 
 import ecommerce.ecommerce.entity.Products;
 import ecommerce.ecommerce.entity.Transaction;
-import ecommerce.ecommerce.entity.Users;
+import ecommerce.ecommerce.entity.User;
 import ecommerce.ecommerce.repository.ProductsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
-import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -53,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public String buyProducts(Users user, Products product, int quantity) {
+    public String buyProducts(User user, Products product, int quantity) {
         Products currentProduct = productsRepository.findById(product.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found: " + product.getProductId()));
 

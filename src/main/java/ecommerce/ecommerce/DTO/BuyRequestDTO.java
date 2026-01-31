@@ -1,8 +1,5 @@
 package ecommerce.ecommerce.DTO;
 
-import ecommerce.ecommerce.entity.Products;
-import ecommerce.ecommerce.entity.Users;
-
 public class BuyRequestDTO {
     private int userId;
     private int productId;
