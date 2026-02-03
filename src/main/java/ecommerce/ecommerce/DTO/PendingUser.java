@@ -7,6 +7,9 @@ public class PendingUser implements Serializable {
         private String email;
         private String password;
 
+    public PendingUser() {
+    }
+
     public PendingUser(String name, String email, String password) {
         this.name = name;
         this.email = email;

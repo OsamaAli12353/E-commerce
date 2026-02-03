@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
+import static ecommerce.ecommerce.service.PasswordValidator.isValid;
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -73,14 +75,30 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody UserDTO req) {
-        authService.register(req);
+        String password = req.getPassword();
+
+        if (password == null || password.isEmpty()) {
+            throw new RuntimeException("Password cannot be null or empty");
+        }
+
+        if (!isValid(password)) {
+            throw new RuntimeException("Password is too weak. Must be 8-32 chars, include uppercase, number, special char");
+        }
+
+        authService.register(req); // هنا بيحفظ PendingUser ويولد OTP
         return ResponseEntity.ok("OTP sent");
     }
 
+
     @PostMapping("/verify-otp")
     public ResponseEntity<String> verifyOtp(@RequestBody OtpVerifyRequest req) {
+        System.out.println("verifyOtp method called for email: " + req.getEmail());
+
         authService.verifyOtp(req);
+
+        System.out.println("User saved successfully for email: " + req.getEmail());
         return ResponseEntity.ok("User saved successfully");
     }
+
 
 }
