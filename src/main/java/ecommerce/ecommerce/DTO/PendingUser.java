@@ -2,19 +2,33 @@ package ecommerce.ecommerce.DTO;
 
 import java.io.Serializable;
 
+/**
+ * Represents a user awaiting email verification.
+ * Stored temporarily in Redis until OTP is verified.
+ * Implements Serializable to allow Redis caching.
+ */
 public class PendingUser implements Serializable {
-        private String name;
-        private String email;
-        private String password;
+    // User's full name
+    private String name;
 
+    // User's email address (used as identifier)
+    private String email;
+
+    // User's hashed password
+    private String password;
+
+    // Default constructor
     public PendingUser() {
     }
 
+    // Constructor with all fields
     public PendingUser(String name, String email, String password) {
         this.name = name;
         this.email = email;
         this.password = password;
     }
+
+    // Getters and Setters
 
     public String getName() {
         return name;
