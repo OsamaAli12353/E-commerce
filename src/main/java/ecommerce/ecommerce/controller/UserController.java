@@ -1,9 +1,11 @@
 package ecommerce.ecommerce.controller;
 
+import ecommerce.ecommerce.DTO.OtpVerifyRequest;
 import ecommerce.ecommerce.DTO.UserDTO;
 import ecommerce.ecommerce.DTO.UserWithDetailsDTO;
 import ecommerce.ecommerce.entity.User;
 import ecommerce.ecommerce.security.CustomUserDetails;
+import ecommerce.ecommerce.service.AuthService;
 import ecommerce.ecommerce.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,9 +20,11 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, AuthService authService) {
         this.userService = userService;
+        this.authService = authService;
     }
 
     // ADMIN only
@@ -67,10 +71,16 @@ public class UserController {
         return ResponseEntity.ok("User deleted successfully");
     }
 
-    // REGISTER (public)
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody UserDTO req) {
-        userService.register(req.getName(), req.getEmail(), req.getPassword());
-        return ResponseEntity.ok("User registered successfully");
+        authService.register(req);
+        return ResponseEntity.ok("OTP sent");
     }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<String> verifyOtp(@RequestBody OtpVerifyRequest req) {
+        authService.verifyOtp(req);
+        return ResponseEntity.ok("User saved successfully");
+    }
+
 }

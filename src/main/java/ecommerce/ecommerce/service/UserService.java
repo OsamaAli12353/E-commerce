@@ -20,6 +20,5 @@ public interface UserService {
 
     User login(String email, String password);
 
-    User register(String name, String email, String password);
     boolean isAdmin(User user);
 }

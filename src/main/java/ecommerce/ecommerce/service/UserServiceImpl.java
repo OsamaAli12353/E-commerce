@@ -133,29 +133,7 @@ public class UserServiceImpl implements UserService {
         return user;
     }
 
-    @Transactional
-    @Override
-    public User register(String name, String email, String password) {
-        Optional<User> existingUser = userRepository.findUsersByEmail(email);
-        if (existingUser.isPresent()) {
-            throw new RuntimeException("Email is already registered");
-        }
 
-        if (!PasswordValidator.isValid(password))
-            throw new RuntimeException(
-                    "Password must be at least 8 characters long, contain a capital letter, a number, and a special character."
-            );
-
-        String hashedPassword = passwordEncoder.encode(password);
-        User newUser = new User(name, email, hashedPassword);
-
-        Roles customerRole = rolesRepository.findByRoleName("CUSTOMER");
-        if (customerRole == null)
-            throw new RuntimeException("Customer role not found in database");
-
-        newUser.setRole(customerRole);
-        return userRepository.save(newUser);
-    }
 
     public boolean isAdmin(User user) {
         return user.getRole() != null && "ADMIN".equals(user.getRole().getRoleName());
